@@ -48,7 +48,7 @@ def get_next_file_number(file_prefix, target_dir):
 def get_rm_number(file_number):
     if file_number % 10 == 1:
         new_number = file_number - 10
-        new_file_number = f"{new_number // 10:03d}*"
+        new_file_number = f"{new_number // 10:04d}*"
         return new_file_number
     return None
 
@@ -116,8 +116,8 @@ def write_deal_commands(deal_file, miner_ids, archive_dir_name, commp_cid, piece
                         f"--duration=1555200 --wallet={wallet_address}\n")
 
 
-def get_miner_ids(last_4_digits):
-    if last_4_digits % 2 == 0:  # Even
+def get_miner_ids(last_digits):
+    if last_digits % 2 == 0:  # Even
         return [
             os.getenv("MINER02"),
             os.getenv("MINER03"),
@@ -267,7 +267,7 @@ def sql_to_archive():
     # Create archive
     file_prefix = f"{timestamp}{server_id}-"
     archive_file_number = get_next_file_number(file_prefix, target_dir)
-    archive_dir_name = f"{file_prefix}{archive_file_number:04}"
+    archive_dir_name = f"{file_prefix}{archive_file_number:05}"
     archive_file_name = f"{archive_dir_name}.tar"
     aes_archive_file_name = f"{archive_dir_name}.tar.aes"
     deal_file_name = f"{archive_dir_name}.deal"
@@ -310,7 +310,6 @@ def sql_to_archive():
     car_file_name = f"{archive_dir_name}.tar.aes.car"
     car_file_path = os.path.join(target_dir, car_file_name)
     car_path = os.getenv("CAR_PATH")
-    #car_command = ["car", "create", "-f", car_file_path, "--version", "1", aes_archive_file_path]
     car_command = [car_path, "create", "-f", car_file_path, "--version", "1", aes_archive_file_path]
 
     try:
@@ -329,8 +328,8 @@ def sql_to_archive():
     commp_cid = ''
 
     wallet_address = os.getenv("WALLET_ADDRESS")
-    last_4_digits = int(archive_dir_name[-4:])
-    miner_ids = get_miner_ids(last_4_digits)
+    last_digits = int(archive_dir_name[-5:])
+    miner_ids = get_miner_ids(last_digits)
 
     log_message("INFO", f"{miner_ids} {wallet_address} {car_file_path}")
 
