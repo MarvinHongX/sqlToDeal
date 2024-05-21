@@ -2,7 +2,7 @@
 #########################################################################################
 # Author  : Hong
 # Created : 4/30/2024
-# Modified: 5/8/2024
+# Modified: 5/21/2024
 # Notes   :
 #########################################################################################
 import time
@@ -14,7 +14,6 @@ import sys
 import datetime
 import subprocess
 from dotenv import load_dotenv
-
 
 # .env file
 load_dotenv()
@@ -44,6 +43,14 @@ def get_next_file_number(file_prefix, target_dir):
         return max_file_number + 1
     else:
         return 1
+
+
+def get_rm_number(file_number):
+    if file_number % 10 == 1:
+        new_number = file_number - 10
+        new_file_number = f"{new_number // 10:03d}*"
+        return new_file_number
+    return None
 
 
 def get_log_time():
@@ -121,7 +128,7 @@ def get_miner_ids(last_4_digits):
         return [
             os.getenv("MINER01"),
             os.getenv("MINER02"),
-            os.getenv("MINER04"),
+            os.getenv("MINER05"),
             os.getenv("MINER06")
         ]
 
@@ -170,6 +177,8 @@ def get_commp_cid(file_path):
     return commp_cid
 
 def sql_to_archive():
+    server_id = os.getenv("SERVER_ID")
+    sh_dir = os.getenv("SH_DIR")
     source_dir = os.getenv("SOURCE_DIR")
     target_dir = os.getenv("TARGET_DIR")
     time_diff = float(os.getenv("TIME_DIFF"))
@@ -228,9 +237,35 @@ def sql_to_archive():
 
     log_message("INFO", f"total_size is {total_size} ({bytes_to_gib(total_size)}GiB)")
 
+    # Append more
+    file_path = os.path.join(target_dir, 'README.MD')
+
+    current_unix_time = datetime.datetime.now().timestamp()
+
+    if os.path.exists(file_path):
+        with open(file_path, 'w') as file:
+            file.write(f"This file was created at Unix time: {current_unix_time}")
+    else:
+        with open(file_path, 'x') as file:
+            file.write(f"This file was created at Unix time: {current_unix_time}")
+
+    file_size = os.path.getsize(file_path)
+    file_m_time = datetime.datetime.fromtimestamp(os.path.getmtime(file_path)) # File modification time
+    is_target = True
+
+    file = {
+        'file_path': file_path,
+        'file_name': file_name,
+        'file_size': file_size,
+        'file_m_time': file_m_time,
+        'is_target': is_target
+    }
+
+    selected_files.append(file)
+
 
     # Create archive
-    file_prefix = f"{timestamp}-"
+    file_prefix = f"{timestamp}{server_id}-"
     archive_file_number = get_next_file_number(file_prefix, target_dir)
     archive_dir_name = f"{file_prefix}{archive_file_number:04}"
     archive_file_name = f"{archive_dir_name}.tar"
@@ -241,7 +276,15 @@ def sql_to_archive():
     deal_file_path = os.path.join(target_dir, deal_file_name)
     selected_file_paths = [file['file_path'] for file in selected_files]
 
-    
+   
+    rm_number = get_rm_number(archive_file_number)
+    if rm_number:
+        rm_dir_name = f"{file_prefix}{rm_number}"
+        rm_command = f"rm {os.path.join(target_dir, rm_dir_name)}"
+        log_message("INFO", f"Executing rm command: {rm_command}")
+        subprocess.run(rm_command, shell=True)
+
+
     log_message('INFO', f"Generating archive name: {archive_file_name}")
     
     try:
@@ -263,7 +306,6 @@ def sql_to_archive():
         log_message('ERROR', f"Error compressing files: {e}")
         return
 
-
     # Create car
     car_file_name = f"{archive_dir_name}.tar.aes.car"
     car_file_path = os.path.join(target_dir, car_file_name)
@@ -274,7 +316,7 @@ def sql_to_archive():
     try:
         subprocess.run(car_command, check=True)
         os.remove(aes_archive_file_path)
-        time.sleep(20)
+        time.sleep(3)
         log_message("INFO", f"CAR file created: {car_file_name}")
     except subprocess.CalledProcessError as e:
         log_message("ERROR", f"Error creating CAR file: {e}")
