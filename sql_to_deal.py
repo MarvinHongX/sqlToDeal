@@ -108,7 +108,7 @@ def write_deal_commands(deal_file, miner_ids, archive_dir_name, commp_cid, piece
     for miner_id in miner_ids:
         time.sleep(3)
         deal_file.write(f"boost -vv deal --verified=true --provider={miner_id} "
-                        f"--http-url=http://{web_server_ip}/{archive_dir_name}.tar.aes.car "
+                        f"--http-url=http://{web_server_ip}/http/{archive_dir_name}.tar.aes.car "
                         f"--commp={commp_cid} "
                         f"--car-size={car_file_size} "
                         f"--piece-size={piece_size} "
@@ -117,6 +117,16 @@ def write_deal_commands(deal_file, miner_ids, archive_dir_name, commp_cid, piece
 
 
 def get_miner_ids(last_digits):
+    deal_option = os.getenv("DEALOPTION")
+    if deal_option == "F":
+        return [
+            os.getenv("MINER01"),
+            os.getenv("MINER0"),
+            os.getenv("MINER04"),
+            os.getenv("MINER05"),
+            os.getenv("MINER06")
+        ]
+
     if last_digits % 2 == 0:  # Even
         return [
             os.getenv("MINER02"),
